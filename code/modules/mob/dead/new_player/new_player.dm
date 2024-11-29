@@ -192,6 +192,10 @@ GLOBAL_LIST_INIT(roleplay_readme, world.file2list("strings/rt/rp_prompt.txt"))
 			to_chat(usr, span_boldwarning("You are in the migrant queue."))
 			return
 
+		if(!(client?.prefs?.selected_patron?.type in ALL_DIVINE_PATRONS))
+			to_chat(usr, span_warning("You may not latejoin as a heretic. Please set your faith to PSYDON."))
+			return
+
 		if(href_list["late_join"] == "override")
 			LateChoices()
 			return
@@ -202,7 +206,7 @@ GLOBAL_LIST_INIT(roleplay_readme, world.file2list("strings/rt/rp_prompt.txt"))
 #else*/
 
 
-		var/timetojoin = 15 MINUTES
+		var/timetojoin = 1 SECONDS
 #ifdef ALLOWPLAY
 		timetojoin = 1 SECONDS
 #endif
@@ -244,6 +248,45 @@ GLOBAL_LIST_INIT(roleplay_readme, world.file2list("strings/rt/rp_prompt.txt"))
 		ViewManifest()
 
 	if(href_list["SelectedJob"])
+		if(href_list["SelectedJob"] == "Consort")
+			// Check for ruler
+			var/mob/living/carbon/human/ruler
+			for(var/mob/living/carbon/human/potential_ruler in GLOB.human_list)
+				if(potential_ruler?.mind?.assigned_role in list("Baron", "Baroness"))
+					ruler = potential_ruler
+					break
+			
+			if(!ruler)
+				to_chat(src, "<span class='warning'>There must be a Baron/Baroness for you to join as Consort!</span>")
+				message_admins("DEBUG: Consort join failed - No ruler found")
+				return
+			
+			// Get player genital preferences from customizer entries
+			var/player_has_penis = FALSE
+			var/player_has_vagina = FALSE
+			for(var/datum/customizer_entry/entry as anything in client.prefs.customizer_entries)
+				if(istype(entry, /datum/customizer_entry/organ/penis))
+					player_has_penis = (entry.disabled == 0)
+				if(istype(entry, /datum/customizer_entry/organ/vagina))
+					player_has_vagina = (entry.disabled == 0)
+			
+			// Get ruler genital preferences from customizer entries using stored preferences
+			var/ruler_has_penis = FALSE
+			var/ruler_has_vagina = FALSE
+			var/datum/preferences/ruler_prefs = GLOB.preferences_datums[ruler.ckey]
+			for(var/datum/customizer_entry/entry as anything in ruler_prefs.customizer_entries)
+				if(istype(entry, /datum/customizer_entry/organ/penis))
+					ruler_has_penis = (entry.disabled == 0)
+				if(istype(entry, /datum/customizer_entry/organ/vagina))
+					ruler_has_vagina = (entry.disabled == 0)
+			
+			
+			// Simple check - if they have the same genitals, deny
+			if((ruler_has_penis && player_has_penis) || (ruler_has_vagina && player_has_vagina))
+				to_chat(src, "<span class='warning'>You cannot join as Consort due to having the same genitals as the [ruler.mind.assigned_role]!</span>")
+				return
+
+
 		if(!SSticker?.IsRoundInProgress())
 			to_chat(usr, span_danger("The round is either not ready, or has already finished..."))
 			return
@@ -294,7 +337,7 @@ GLOBAL_LIST_INIT(roleplay_readme, world.file2list("strings/rt/rp_prompt.txt"))
 	var/list/dat = list()
 	dat += GLOB.roleplay_readme
 	if(dat)
-		var/datum/browser/popup = new(src, "Primer", "AZURE PEAK", 460, 550)
+		var/datum/browser/popup = new(src, "Primer", "PENUMBRA", 460, 550)
 		popup.set_content(dat.Join())
 		popup.open()
 
@@ -364,6 +407,8 @@ GLOBAL_LIST_INIT(roleplay_readme, world.file2list("strings/rt/rp_prompt.txt"))
 			return "[jobtitle] requires more faith."
 		if(JOB_UNAVAILABLE_LASTCLASS)
 			return "You have played [jobtitle] recently."
+		if(JOB_UNAVAILABLE_FAITH)
+			return "You may not latejoin as a heretic. Please set your faith to PSYDON."
 		if(JOB_UNAVAILABLE_JOB_COOLDOWN)
 			if(usr.ckey in GLOB.job_respawn_delays)
 				var/remaining_time = round((GLOB.job_respawn_delays[usr.ckey] - world.time) / 10)
@@ -372,8 +417,13 @@ GLOBAL_LIST_INIT(roleplay_readme, world.file2list("strings/rt/rp_prompt.txt"))
 
 //used for latejoining
 /mob/dead/new_player/proc/IsJobUnavailable(rank, latejoin = FALSE)
+	// Block ALL late joins for heretics
+	if(latejoin && !(client?.prefs?.selected_patron?.type in ALL_DIVINE_PATRONS))
+		return JOB_UNAVAILABLE_FAITH
+	
 	if(QDELETED(src))
 		return JOB_UNAVAILABLE_GENERIC
+	
 	if(istype(SSticker.mode, /datum/game_mode/chaosmode))
 		var/datum/game_mode/chaosmode/C = SSticker.mode
 		if(C.skeletons)
