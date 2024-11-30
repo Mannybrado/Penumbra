@@ -225,7 +225,7 @@
 		if(!(M.mobility_flags & MOBILITY_STAND))
 			if(passcrawl)
 				return TRUE
-	if(icon_state == "woodrailing" && (dir in CORNERDIRS))
+	if(icon_state == "bordercorner" && (dir in CORNERDIRS))
 		var/list/baddirs = list()
 		switch(dir)
 			if(SOUTHEAST)
@@ -256,7 +256,7 @@
 		if(!(M.mobility_flags & MOBILITY_STAND))
 			if(passcrawl)
 				return TRUE
-	if(icon_state == "woodrailing" && (dir in CORNERDIRS))
+	if(icon_state == "bordercorner" && (dir in CORNERDIRS))
 		var/list/baddirs = list()
 		switch(dir)
 			if(SOUTHEAST)
@@ -297,6 +297,12 @@
 	name = "border"
 	desc = ""
 	icon_state = "border"
+	passcrawl = FALSE
+
+/obj/structure/fluff/railing/border/corner
+	name = "border"
+	desc = ""
+	icon_state = "bordercorner"
 	passcrawl = FALSE
 
 /obj/structure/fluff/railing/fence
