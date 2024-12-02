@@ -115,7 +115,7 @@
 
 /obj/structure/fluff/walldeco/maidendrape
 	name = "black drape"
-	desc = "A drape of fabric."
+	desc = "A drape of black fabric, the universal symbol of debauchery and laundry."
 	icon_state = "black_drape"
 	dir = SOUTH
 	pixel_y = 32

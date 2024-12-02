@@ -36,6 +36,7 @@
 /turf/closed/wall/mineral/rogue/stone/window
 	name = "stone window"
 	desc = "A window with solid and sturdy stone frame."
+	icon_state = "stonewindow"
 	opacity = FALSE
 	max_integrity = 1300
 
