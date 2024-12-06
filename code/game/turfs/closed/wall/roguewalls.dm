@@ -96,6 +96,9 @@
 	climbdiff = 4
 	damage_deflection = 20
 
+/turf/closed/wall/mineral/rogue/stonebrick/reddish
+	color = "#e0b7af"
+
 /turf/closed/wall/mineral/rogue/wood
 	name = "wooden wall"
 	desc = "A rough-hewn wall of wood."
@@ -116,6 +119,7 @@
 /turf/closed/wall/mineral/rogue/wood/window
 	name = "wooden window"
 	desc = "A window with rough hewn wood frame."
+	icon_state = "woodwindow"
 	opacity = FALSE
 	max_integrity = 550
 
