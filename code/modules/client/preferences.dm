@@ -171,7 +171,7 @@ GLOBAL_LIST_EMPTY(chosen_names)
 	// Class preferences for each job
 	var/town_guard_class = null
 	var/sergeant_class = null
-	var/templar_class = null
+	// templar_class removed - class is now determined by Inquisitor's choice
 	var/knight_lieutenant_class = null
 	var/hand_class = null
 	var/squire_class = null
@@ -231,6 +231,29 @@ GLOBAL_LIST_EMPTY(chosen_names)
 	reset_all_customizer_accessory_colors()
 	randomize_all_customizer_accessories()
 	reset_descriptors()
+	update_gender_customization()
+	
+	// Enforce genital rules
+	var/datum/customizer_entry/organ/penis/penis_entry
+	var/datum/customizer_entry/organ/vagina/vagina_entry
+	
+	for(var/datum/customizer_entry/entry as anything in customizer_entries)
+		if(istype(entry, /datum/customizer_entry/organ/penis))
+			penis_entry = entry
+		else if(istype(entry, /datum/customizer_entry/organ/vagina))
+			vagina_entry = entry
+	
+	// For males: Penis must always be enabled if it exists
+	if(gender == MALE && penis_entry)
+		penis_entry.disabled = FALSE
+	
+	// For females: Only prevent having both enabled at once
+	else if(gender == FEMALE && penis_entry && vagina_entry)
+		// If both are somehow enabled, disable vagina
+		if(!penis_entry.disabled && !vagina_entry.disabled)
+			vagina_entry.disabled = TRUE
+
+	update_preview_icon() // Update the preview mannequin when species changes
 
 #define APPEARANCE_CATEGORY_COLUMN "<td valign='top' width='14%'>"
 #define MAX_MUTANT_ROWS 4
@@ -241,6 +264,7 @@ GLOBAL_LIST_EMPTY(chosen_names)
 	if(slot_randomized)
 		load_character(default_slot) // Reloads the character slot. Prevents random features from overwriting the slot if saved.
 		slot_randomized = FALSE
+	update_preview_icon() // Ensure preview is shown when UI opens
 	var/list/dat = list("<center>")
 	if(tabchoice)
 		current_tab = tabchoice
@@ -943,7 +967,7 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 			HTML += "</a></td></tr>"
 
 			// Add advclass selection for jobs with advanced classes
-			if(job.advclass_cat_rolls?.len && job_preferences[job.title] != null && job.title != "Towner" && job.title != "Vagabond")
+			if(job.advclass_cat_rolls?.len && job_preferences[job.title] != null && job.title != "Towner" && job.title != "Vagabond" && job.title != "Templar")
 				HTML += "<tr bgcolor='#000000'><td width='60%' align='right'>"
 				HTML += "Class:</td><td><a href='?_src_=prefs;preference=advclass;job=[rank]'>"
 				var/selected_class
@@ -953,7 +977,7 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 					if("Sergeant at Arms")
 						selected_class = sergeant_class
 					if("Templar")
-						selected_class = templar_class
+						selected_class = knight_lieutenant_class
 					if("Knight Lieutenant")
 						selected_class = knight_lieutenant_class
 					if("Hand")
@@ -2239,7 +2263,7 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 							if("Sergeant at Arms")
 								sergeant_class = (choice == "Random" ? null : choice)
 							if("Templar")
-								templar_class = (choice == "Random" ? null : choice)
+								knight_lieutenant_class = (choice == "Random" ? null : choice)
 							if("Knight Lieutenant")
 								knight_lieutenant_class = (choice == "Random" ? null : choice)
 							if("Hand")
@@ -2459,10 +2483,16 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 
 /datum/preferences/proc/update_gender_customization()
 	var/list/new_entries = list()
-	// Keep non-genital entries
+	var/old_penis_disabled = TRUE
+	var/old_vagina_disabled = TRUE
+	
+	// Keep track of old genital states and non-genital entries
 	for(var/datum/customizer_entry/entry as anything in customizer_entries)
-		if(!istype(entry, /datum/customizer_entry/organ/penis) && !istype(entry, /datum/customizer_entry/organ/vagina) && !istype(entry, /datum/customizer_entry/organ/breasts) && !istype(entry, /datum/customizer_entry/organ/testicles))
-			new_entries += entry
+		if(istype(entry, /datum/customizer_entry/organ/penis))
+			old_penis_disabled = entry.disabled
+		else if(istype(entry, /datum/customizer_entry/organ/vagina))
+			old_vagina_disabled = entry.disabled
+		else if(!istype(entry, /datum/customizer_entry/organ/breasts) && !istype(entry, /datum/customizer_entry/organ/testicles))
 			new_entries += entry
 	
 	var/datum/species/species = pref_species
@@ -2474,7 +2504,11 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 		if(!customizer.is_allowed(src))
 			continue
 		
-		if(istype(customizer, /datum/customizer/organ/vagina) || istype(customizer, /datum/customizer/organ/breasts))
+		if(istype(customizer, /datum/customizer/organ/vagina))
+			var/datum/customizer_entry/entry = customizer.make_default_customizer_entry(src, FALSE)  // Don't force disable for females
+			entry.disabled = old_vagina_disabled
+			new_entries += entry
+		else if(istype(customizer, /datum/customizer/organ/breasts))
 			var/datum/customizer_entry/entry = customizer.make_default_customizer_entry(src, gender != FEMALE)
 			new_entries += entry
 	
@@ -2487,7 +2521,12 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 			continue
 		
 		if(istype(customizer, /datum/customizer/organ/penis))
-			penis_entry = customizer.make_default_customizer_entry(src, gender != MALE)
+			penis_entry = customizer.make_default_customizer_entry(src, FALSE)  // Don't force disable for females
+			// Only force enable for males, otherwise keep previous state
+			if(gender == MALE)
+				penis_entry.disabled = FALSE
+			else
+				penis_entry.disabled = old_penis_disabled
 			new_entries += penis_entry
 			penis_enabled = !penis_entry.disabled
 		else if(istype(customizer, /datum/customizer/organ/testicles) && penis_enabled)
@@ -2524,3 +2563,25 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
             pronouns = "she/her"
             voice_type = "Feminine"
             update_gender_customization() // This will add default vagina
+
+/datum/preferences/proc/validate_genitals()
+	var/has_genitals = FALSE
+	for(var/datum/customizer_entry/entry as anything in customizer_entries)
+		if(istype(entry, /datum/customizer_entry/organ/vagina) || istype(entry, /datum/customizer_entry/organ/penis))
+			if(!entry.disabled)
+				has_genitals = TRUE
+				break
+	return has_genitals
+
+/datum/preferences/proc/validate_genitals_with_message()
+	var/has_genitals = validate_genitals()
+	if(!has_genitals)
+		to_chat(parent?.mob, span_warning("You must have at least one genital enabled to proceed."))
+	return has_genitals
+
+/datum/preferences/proc/close_latejoin_menu(mob/user)
+	if(!user?.client)
+		return
+	
+	// Close latejoin menu
+	user << browse(null, "window=latechoices")

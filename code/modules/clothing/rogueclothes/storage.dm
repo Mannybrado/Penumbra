@@ -162,7 +162,7 @@
 
 /obj/item/storage/belt/rogue/pouch/coins/reallyrich/Initialize()
 	. = ..()
-	var/obj/item/roguecoin/gold/pile/H = new(loc)
+	var/obj/item/roguecoin/gold/bigpile/H = new(loc)
 	if(istype(H))
 		if(!SEND_SIGNAL(src, COMSIG_TRY_STORAGE_INSERT, H, null, TRUE, TRUE))
 			qdel(H)
@@ -257,7 +257,7 @@
 		STR.not_while_equipped = TRUE
 		STR.allow_dump_out = TRUE
 
-obj/item/storage/belt/rogue/leather/exoticsilkbelt
+/obj/item/storage/belt/rogue/leather/exoticsilkbelt
 	name = "Exotic Silk Belt"
 	desc = "A gold adorned belt with the softest of silks barely concealing one's bits."
 	icon_state = "exoticsilkbelt"

@@ -1188,3 +1188,6 @@
 /mob/living/carbon/human/proc/is_virile()
 	var/obj/item/organ/testicles/testicles = getorganslot(ORGAN_SLOT_TESTICLES)
 	return testicles.virility
+
+/mob/living/carbon/human/after_creation()
+	..()
