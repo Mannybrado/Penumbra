@@ -99,6 +99,9 @@
 /turf/closed/wall/mineral/rogue/stonebrick/reddish
 	color = "#e0b7af"
 
+/turf/closed/wall/mineral/rogue/stonebrick/blueish
+	color = "#afc1e0"
+
 /turf/closed/wall/mineral/rogue/wood
 	name = "wooden wall"
 	desc = "A rough-hewn wall of wood."

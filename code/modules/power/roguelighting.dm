@@ -451,6 +451,13 @@
 	crossfire = FALSE
 	cookonme = TRUE
 
+/obj/machinery/light/rogue/wallfire/fireplace
+	icon = 'icons/roguetown/misc/fireplace64.dmi'
+	icon_state = "fireplace1"
+	base_state = "fireplace"
+	pixel_y = 32
+
+
 /obj/machinery/light/rogue/wallfire/candle
 	name = "candles"
 	icon_state = "wallcandle1"
