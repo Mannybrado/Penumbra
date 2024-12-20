@@ -129,16 +129,16 @@
 
 /datum/species/demihuman/get_skin_list()
 	return list(
-		"Grenzelhoft" = SKIN_COLOR_GRENZELHOFT,
-		"Hammerhold" = SKIN_COLOR_HAMMERHOLD,
-		"Avar" = SKIN_COLOR_AVAR,
-		"Rockhill" = SKIN_COLOR_ROCKHILL,
-		"Otava" = SKIN_COLOR_OTAVA,
-		"Etrusca" = SKIN_COLOR_ETRUSCA,
-		"Gronn" = SKIN_COLOR_GRONN,
-		"North Zybantia (Giza)" = SKIN_COLOR_GIZA,
-		"West Zybantia (Shalvistine)" = SKIN_COLOR_SHALVISTINE,
-		"East Zybantia (Lalvestine)" = SKIN_COLOR_LALVESTINE,
-		"Naledi" = SKIN_COLOR_NALEDI,
-		"Kazengun" = SKIN_COLOR_KAZENGUN,
+		"Skin Tone 1" = SKIN_COLOR_HUMEN_1,
+		"Skin Tone 2" = SKIN_COLOR_HUMEN_2,
+		"Skin Tone 3" = SKIN_COLOR_HUMEN_3,
+		"Skin Tone 4" = SKIN_COLOR_HUMEN_4,
+		"Skin Tone 5" = SKIN_COLOR_HUMEN_5,
+		"Skin Tone 6" = SKIN_COLOR_HUMEN_6,
+		"Skin Tone 7" = SKIN_COLOR_HUMEN_7,
+		"Skin Tone 8" = SKIN_COLOR_HUMEN_8,
+		"Skin Tone 9" = SKIN_COLOR_HUMEN_9,
+		"Skin Tone 10" = SKIN_COLOR_HUMEN_10,
+		"Skin Tone 11" = SKIN_COLOR_HUMEN_11,
+		"Skin Tone 12" = SKIN_COLOR_HUMEN_12
 	)
