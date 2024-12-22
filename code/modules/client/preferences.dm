@@ -201,6 +201,16 @@ GLOBAL_LIST_EMPTY(chosen_names)
 			return
 	//Set the race to properly run race setter logic
 	set_new_race(pref_species, null)
+
+	// Enable all races and genders for family preferences by default
+	family_species = list()
+	var/list/available_species = get_selectable_species()
+	for(var/species_name in available_species)
+		var/datum/species/S = GLOB.species_list[species_name]
+		family_species += S.id
+
+	family_gender = list(MALE,FEMALE)
+
 	if(!charflaw)
 		charflaw = pick(GLOB.character_flaws)
 		charflaw = GLOB.character_flaws[charflaw]
@@ -232,21 +242,21 @@ GLOBAL_LIST_EMPTY(chosen_names)
 	randomize_all_customizer_accessories()
 	reset_descriptors()
 	update_gender_customization()
-	
+
 	// Enforce genital rules
 	var/datum/customizer_entry/organ/penis/penis_entry
 	var/datum/customizer_entry/organ/vagina/vagina_entry
-	
+
 	for(var/datum/customizer_entry/entry as anything in customizer_entries)
 		if(istype(entry, /datum/customizer_entry/organ/penis))
 			penis_entry = entry
 		else if(istype(entry, /datum/customizer_entry/organ/vagina))
 			vagina_entry = entry
-	
+
 	// For males: Penis must always be enabled if it exists
 	if(gender == MALE && penis_entry)
 		penis_entry.disabled = FALSE
-	
+
 	// For females: Only prevent having both enabled at once
 	else if(gender == FEMALE && penis_entry && vagina_entry)
 		// If both are somehow enabled, disable vagina
@@ -397,7 +407,7 @@ GLOBAL_LIST_EMPTY(chosen_names)
 			var/datum/faith/selected_faith = GLOB.faithlist[selected_patron?.associated_faith]
 			dat += "<b>Faith:</b> <a href='?_src_=prefs;preference=faith;task=input'>[selected_faith?.name || "FUCK!"]</a><BR>"
 			dat += "<b>Patron:</b> <a href='?_src_=prefs;preference=patron;task=input'>[selected_patron?.name || "FUCK!"]</a><BR>"
-			dat += "<b>Family:</b> <a href='?_src_=prefs;preference=family'>[family == FAMILY_NONE ? "No" : "Yes!"]</a><BR>" // Disabling until its working
+			dat += "<b>Family:</b> <a href='?_src_=prefs;preference=family'>[family ? "Yes!" : "No"]</a><BR>" // Disabling until its working
 			if(family != FAMILY_NONE)
 				dat += "<B>Family Preferences:</B>"
 				dat += " <small><a href='?_src_=prefs;preference=familypref;res=gender'>Gender</a></small>"
@@ -967,7 +977,7 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 			HTML += "</a></td></tr>"
 
 			// Add advclass selection for jobs with advanced classes
-			if(job.advclass_cat_rolls?.len && job_preferences[job.title] != null && job.title != "Towner" && job.title != "Vagabond" && job.title != "Templar")
+			if(job.advclass_cat_rolls?.len && job_preferences[job.title] != null && job.title != "Towner" && job.title != "Vagabond" && job.title != "Occultist")
 				HTML += "<tr bgcolor='#000000'><td width='60%' align='right'>"
 				HTML += "Class:</td><td><a href='?_src_=prefs;preference=advclass;job=[rank]'>"
 				var/selected_class
@@ -976,8 +986,6 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 						selected_class = town_guard_class
 					if("Sergeant at Arms")
 						selected_class = sergeant_class
-					if("Templar")
-						selected_class = knight_lieutenant_class
 					if("Knight Lieutenant")
 						selected_class = knight_lieutenant_class
 					if("Hand")
@@ -1393,9 +1401,26 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 			if("gender")
 				var/choice
 				while(choice != "(DONE)")
-					var/list/choices = list("[(MALE in family_gender) ? "(+)" : ""]Masculine" = MALE,"[(FEMALE in family_gender) ? "(+)" : ""]Feminine" = FEMALE)
+					var/list/choices = list()
+					// Check for penis
+					var/has_penis = FALSE
+					var/has_vagina = FALSE
+					for(var/datum/customizer_entry/entry as anything in customizer_entries)
+						if(istype(entry, /datum/customizer_entry/organ/penis) && !entry.disabled)
+							has_penis = TRUE
+						if(istype(entry, /datum/customizer_entry/organ/vagina) && !entry.disabled)
+							has_vagina = TRUE
+
+					// Set display text based on genitals
+					if(has_penis)
+						choices = list("[(MALE in family_gender) ? "(+)" : ""]Male" = MALE,"[(FEMALE in family_gender) ? "(+)" : ""]Female" = FEMALE)
+					else if(has_vagina)
+						choices = list("[(MALE in family_gender) ? "(+)" : ""]Male" = MALE,"[(FEMALE in family_gender) ? "(+)" : ""]Shemale" = FEMALE)
+					else
+						choices = list("[(MALE in family_gender) ? "(+)" : ""]Male" = MALE,"[(FEMALE in family_gender) ? "(+)" : ""]Female" = FEMALE)
+					
 					choices += "(DONE)"
-					choice = input(usr,"I've always found my eyes wander towards those that appear...","GENDER") as anything in choices
+					choice = input(usr,"I've always found my eyes wander towards those that appear... (+) = ON","GENDER") as anything in choices
 					if(choice != "(DONE)")
 						if(choices[choice] in family_gender)
 							family_gender -= choices[choice]
@@ -1411,7 +1436,7 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 						var/index = "[(S.id in family_species) ? "(+)" : ""][S.name]"
 						choices[index] = S.id
 					choices += "(DONE)"
-					choice = input(usr,"Out of all the many races, none catch my fancy quite like...","RACE") as anything in choices
+					choice = input(usr,"Out of all the many races, none catch my fancy quite like... (+) = ON","RACE") as anything in choices
 					if(choice != "(CANCEL)")
 						if(choices[choice] in family_species)
 							family_species -= choices[choice]
@@ -1456,7 +1481,6 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 				var/CtrlMod = text2num(href_list["ctrl"]) ? "Ctrl" : ""
 				var/ShiftMod = text2num(href_list["shift"]) ? "Shift" : ""
 				var/numpad = text2num(href_list["numpad"]) ? "Numpad" : ""
-				// var/key_code = text2num(href_list["key_code"])
 
 				if(GLOB._kbMap[new_key])
 					new_key = GLOB._kbMap[new_key]
@@ -1471,17 +1495,24 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 						full_key = "[AltMod][CtrlMod][new_key]"
 					else
 						full_key = "[AltMod][CtrlMod][ShiftMod][numpad][new_key]"
-				if(key_bindings[old_key])
+
+				// Add this check to handle unbound keys
+				if(old_key == "Unbound")
+					key_bindings[full_key] = list(kb_name)
+				else if(key_bindings[old_key])
 					key_bindings[old_key] -= kb_name
 					if(!length(key_bindings[old_key]))
 						key_bindings -= old_key
 					key_bindings[full_key] += list(kb_name)
-					key_bindings[full_key] = sortList(key_bindings[full_key])
+				else
+					key_bindings[full_key] = list(kb_name)
 
-					user << browse(null, "window=capturekeypress")
-					user.client.update_movement_keys()
-					save_preferences()
-					SetKeybinds(user)
+				key_bindings[full_key] = sortList(key_bindings[full_key])
+
+				user << browse(null, "window=capturekeypress")
+				user.client.update_movement_keys()
+				save_preferences()
+				SetKeybinds(user)
 
 			if("keybindings_reset")
 				var/choice = tgalert(user, "Do you really want to reset your keybindings?", "Setup keybindings", "Do It", "Cancel")
@@ -1582,7 +1613,7 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 //						age = max(min( round(text2num(new_age)), AGE_MAX),AGE_MIN)
 
 				if("age")
-					var/new_age = input(user, "Choose your character's age (18-[pref_species.max_age])", "Yils Dead") as null|anything in pref_species.possible_ages
+					var/new_age = input(user, "Choose your character's age:", "Yils Dead") as null|anything in pref_species.possible_ages
 					if(new_age)
 						age = new_age
 						var/list/hairs
@@ -1594,12 +1625,15 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 						facial_hair_color = hair_color
 						// LETHALSTONE EDIT: let players know what this shit does stats-wise
 						switch (age)
+							if (AGE_YOUNG)
+								to_chat(user, "You've finally amassed enough years to your name to be taken more seriously than a child. Though you may now see eye to eye with your peers, they're still unlikely to treat you as such. (+1 SPD, -1 STR)")
 							if (AGE_ADULT)
 								to_chat(user, "You preside in your 'prime', whatever this may be, and gain no bonus nor endure any penalty for your time spent alive.")
 							if (AGE_MIDDLEAGED)
 								to_chat(user, "Muscles ache and joints begin to slow as Aeon's grasp begins to settle upon your shoulders. (-1 SPD, +1 END)")
 							if (AGE_OLD)
 								to_chat(user, "In a place as lethal as Engima, the elderly are all but marvels... or beneficiaries of the habitually privileged. (-1 STR, -2 SPE, -1 PER, -2 CON, +2 INT)")
+
 						// LETHALSTONE EDIT END
 						ResetJobs()
 						to_chat(user, "<font color='red'>Classes reset.</font>")
@@ -1645,22 +1679,31 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 					var/faith_input = input(user, "Choose your character's faith", "Faith") as null|anything in faiths_named
 					if(faith_input)
 						var/datum/faith/faith = faiths_named[faith_input]
+						ResetJobs()
 						to_chat(user, "<font color='yellow'>Faith: [faith.name]</font>")
 						to_chat(user, "Background: [faith.desc]")
 						to_chat(user, "<font color='red'>Likely Worshippers: [faith.worshippers]</font>")
+						to_chat(user, "<font color='red'><b>Your classes have been reset.</b></font>")
 						selected_patron = GLOB.patronlist[faith.godhead] || GLOB.patronlist[pick(GLOB.patrons_by_faith[faith_input])]
 
 				if("patron")
-					var/list/patrons_named = list()
-					for(var/path as anything in GLOB.patrons_by_faith[selected_patron?.associated_faith || initial(default_patron.associated_faith)])
-						var/datum/patron/patron = GLOB.patronlist[path]
-						if(!patron.name)
+					var/list/patron_choices = list()
+					var/datum/faith/selected_faith = GLOB.faithlist[selected_patron?.associated_faith]
+					for(var/type in GLOB.patrons_by_faith[selected_faith.type])
+						var/datum/patron/P = GLOB.patronlist[type]
+						if(!P || !P.preference_accessible || P.hidden_from_prefs)
 							continue
-						patrons_named[patron.name] = patron
-					var/datum/faith/current_faith = GLOB.faithlist[selected_patron?.associated_faith] || GLOB.faithlist[initial(default_patron.associated_faith)]
-					var/god_input = input(user, "Choose your character's patron", "[current_faith.name]") as null|anything in patrons_named
-					if(god_input)
-						selected_patron = patrons_named[god_input]
+						patron_choices[P.name] = P
+
+					var/choice = input(user, "Choose your patron:", "Patron Selection") as null|anything in patron_choices
+					if(choice)
+						selected_patron = patron_choices[choice]
+						// Unready the player when changing religion
+						if(istype(user, /mob/dead/new_player))
+							var/mob/dead/new_player/N = user
+							if(N.ready != PLAYER_NOT_READY)
+								N.ready = PLAYER_NOT_READY
+								to_chat(user, span_warning("You have been unreadied due to changing your religion."))
 						to_chat(user, "<font color='yellow'>Patron: [selected_patron]</font>")
 						to_chat(user, "<font color='#FFA500'>Domain: [selected_patron.domain]</font>")
 						to_chat(user, "Background: [selected_patron.desc]")
@@ -1923,13 +1966,13 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 					if(gender == "male")
 						pickedGender = "female"
 					if(pickedGender && pickedGender != gender)
-						set_gender(pickedGender)
-						// Automatically update pronouns based on body type
-						switch(pickedGender)
-							if("male")
+						gender = pickedGender
+						// Automatically update pronouns and voice type based on gender
+						switch(gender)
+							if(MALE)
 								pronouns = HE_HIM
 								voice_type = VOICE_TYPE_MASC
-							if("female") 
+							if(FEMALE)
 								pronouns = SHE_HER
 								voice_type = VOICE_TYPE_FEM
 						genderize_customizer_entries()
@@ -1999,7 +2042,6 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 					var/CtrlMod = text2num(href_list["ctrl"]) ? "Ctrl" : ""
 					var/ShiftMod = text2num(href_list["shift"]) ? "Shift" : ""
 					var/numpad = text2num(href_list["numpad"]) ? "Numpad" : ""
-					// var/key_code = text2num(href_list["key_code"])
 
 					if(GLOB._kbMap[new_key])
 						new_key = GLOB._kbMap[new_key]
@@ -2014,11 +2056,18 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 							full_key = "[AltMod][CtrlMod][new_key]"
 						else
 							full_key = "[AltMod][CtrlMod][ShiftMod][numpad][new_key]"
-					if(key_bindings[old_key])
+
+					// Add this check to handle unbound keys
+					if(old_key == "Unbound")
+						key_bindings[full_key] = list(kb_name)
+					else if(key_bindings[old_key])
 						key_bindings[old_key] -= kb_name
 						if(!length(key_bindings[old_key]))
 							key_bindings -= old_key
-					key_bindings[full_key] += list(kb_name)
+						key_bindings[full_key] += list(kb_name)
+					else
+						key_bindings[full_key] = list(kb_name)
+
 					key_bindings[full_key] = sortList(key_bindings[full_key])
 
 					user << browse(null, "window=capturekeypress")
@@ -2222,7 +2271,7 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 					var/job = href_list["job"]
 					var/list/available_classes = list("Random")
 					var/list/class_tutorials = list()  // Store tutorials for each class
-					
+
 					// Get the appropriate class type based on job
 					var/class_type
 					switch(job)
@@ -2230,8 +2279,6 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 							class_type = /datum/advclass/watchman
 						if("Sergeant at Arms")
 							class_type = /datum/advclass/manorguard
-						if("Templar")
-							class_type = /datum/advclass/templar
 						if("Knight Lieutenant")
 							class_type = /datum/advclass/knight
 						if("Hand")
@@ -2244,7 +2291,7 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 							class_type = /datum/advclass/mercenary
 						if("Heir")
 							class_type = /datum/advclass/heir
-					
+
 					if(class_type)
 						for(var/type in subtypesof(class_type))
 							var/datum/advclass/AC = new type()
@@ -2254,7 +2301,7 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 									available_classes += AC.name
 									class_tutorials[AC.name] = AC.tutorial
 							qdel(AC)
-					
+
 					var/choice = input(user, "Choose your preferred class for [job]:", "Class Selection") as null|anything in available_classes
 					if(choice)
 						switch(job)
@@ -2262,8 +2309,6 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 								town_guard_class = (choice == "Random" ? null : choice)
 							if("Sergeant at Arms")
 								sergeant_class = (choice == "Random" ? null : choice)
-							if("Templar")
-								knight_lieutenant_class = (choice == "Random" ? null : choice)
 							if("Knight Lieutenant")
 								knight_lieutenant_class = (choice == "Random" ? null : choice)
 							if("Hand")
@@ -2276,11 +2321,11 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 								mercenary_class = (choice == "Random" ? null : choice)
 							if("Heir")
 								heir_class = (choice == "Random" ? null : choice)
-						
+
 						// Show tutorial text if a class was selected
 						if(choice != "Random")
 							to_chat(user, span_notice("<b>[choice]:</b> [class_tutorials[choice]]"))
-						
+
 						// Refresh the job preferences window
 						SetChoices(user)
 					else
@@ -2485,7 +2530,7 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 	var/list/new_entries = list()
 	var/old_penis_disabled = TRUE
 	var/old_vagina_disabled = TRUE
-	
+
 	// Keep track of old genital states and non-genital entries
 	for(var/datum/customizer_entry/entry as anything in customizer_entries)
 		if(istype(entry, /datum/customizer_entry/organ/penis))
@@ -2494,16 +2539,16 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 			old_vagina_disabled = entry.disabled
 		else if(!istype(entry, /datum/customizer_entry/organ/breasts) && !istype(entry, /datum/customizer_entry/organ/testicles))
 			new_entries += entry
-	
+
 	var/datum/species/species = pref_species
 	var/list/customizers = species.customizers
-	
+
 	// First pass: Add vagina and breasts
 	for(var/customizer_type in customizers)
 		var/datum/customizer/customizer = CUSTOMIZER(customizer_type)
 		if(!customizer.is_allowed(src))
 			continue
-		
+
 		if(istype(customizer, /datum/customizer/organ/vagina))
 			var/datum/customizer_entry/entry = customizer.make_default_customizer_entry(src, FALSE)  // Don't force disable for females
 			entry.disabled = old_vagina_disabled
@@ -2511,7 +2556,7 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 		else if(istype(customizer, /datum/customizer/organ/breasts))
 			var/datum/customizer_entry/entry = customizer.make_default_customizer_entry(src, gender != FEMALE)
 			new_entries += entry
-	
+
 	// Second pass: Add penis and testicles together
 	var/penis_enabled = FALSE
 	var/datum/customizer_entry/penis_entry
@@ -2519,7 +2564,7 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 		var/datum/customizer/customizer = CUSTOMIZER(customizer_type)
 		if(!customizer.is_allowed(src))
 			continue
-		
+
 		if(istype(customizer, /datum/customizer/organ/penis))
 			penis_entry = customizer.make_default_customizer_entry(src, FALSE)  // Don't force disable for females
 			// Only force enable for males, otherwise keep previous state
@@ -2532,7 +2577,7 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 		else if(istype(customizer, /datum/customizer/organ/testicles) && penis_enabled)
 			var/datum/customizer_entry/entry = customizer.make_default_customizer_entry(src, FALSE)
 			new_entries += entry
-	
+
 	customizer_entries = new_entries
 	validate_customizer_entries()
 
@@ -2545,14 +2590,14 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 /datum/preferences/proc/ensure_genital_defaults()
     var/has_penis = FALSE
     var/has_vagina = FALSE
-    
+
     // Check if we have any genitals set
     for(var/datum/customizer_entry/entry as anything in customizer_entries)
         if(istype(entry, /datum/customizer_entry/organ/penis) && !entry.disabled)
             has_penis = TRUE
         if(istype(entry, /datum/customizer_entry/organ/vagina) && !entry.disabled)
             has_vagina = TRUE
-    
+
     // If no genitals are set, set defaults based on gender
     if(!has_penis && !has_vagina)
         if(gender == MALE)
@@ -2582,6 +2627,6 @@ Slots: [job.spawn_positions] [job.round_contrib_points ? "RCP: +[job.round_contr
 /datum/preferences/proc/close_latejoin_menu(mob/user)
 	if(!user?.client)
 		return
-	
+
 	// Close latejoin menu
 	user << browse(null, "window=latechoices")

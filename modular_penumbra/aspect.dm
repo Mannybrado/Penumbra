@@ -252,10 +252,10 @@ GLOBAL_DATUM_INIT(SSroundstart_events, /datum/controller/subsystem/roundstart_ev
 	var/list/available_turfs = list()   // Current pool of available turfs
 	var/static/list/valid_jobs = list(
 		"Servant", "Squire", "Town Guard", "Dungeoneer", "Priest", 
-		"Inquisitor", "Templar", "Acolyte", "Churchling", "Merchant",
+		"Inquisitor", "Occultist", "Acolyte", "Churchling", "Merchant",
 		"Shophand", "Town Elder", "Blacksmith", "Smithy Apprentice",
 		"Artificer", "Soilson", "Tailor", "Innkeeper", "Cook",
-		"Bathmaster", "Taven Knave", "Bath Swain", "Bath Wench", "Tavern Wench", "Towner", "Maid", "Vagabond"
+		"Bathmaster", "Taven Knave", "Bath Swain", "Bath Wench", "Tavern Wench", "Towner", "Maid", "Vagabond", "Templar"
 	)
 
 /datum/round_event/roundstart/throne_meeting/proc/get_valid_turfs(turf/throne_turf)
@@ -529,12 +529,27 @@ GLOBAL_DATUM_INIT(SSroundstart_events, /datum/controller/subsystem/roundstart_ev
 	var/datum/antagonist/traitor_guard/traitor_datum = new()
 	chosen_guard.mind.add_antag_datum(traitor_datum)
 	
-	// Add steal objective (removed the consort-related objective since it wasn't being used)
-	var/datum/objective/steal/steal_objective = new
-	steal_objective.owner = chosen_guard.mind
-	steal_objective.steal_target = /obj/item/roguegem/jewel
-	steal_objective.explanation_text = "Steal the Baron's Crown Jewel from the treasury."
-	traitor_datum.objectives += steal_objective
+	// Check if there's a consort
+	var/mob/living/carbon/human/consort
+	for(var/mob/living/carbon/human/H in GLOB.alive_mob_list)
+		if(H.mind?.assigned_role == "Consort")
+			consort = H
+			break
+	
+	if(consort)
+		// Create assassination objective
+		var/datum/objective/assassinate/kill_objective = new
+		kill_objective.owner = chosen_guard.mind
+		kill_objective.target = consort.mind
+		kill_objective.explanation_text = "Assassinate [consort.real_name], the Consort, to prove your loyalty to the rival noble family."
+		traitor_datum.objectives += kill_objective
+	else
+		// Create steal objective as fallback
+		var/datum/objective/steal/steal_objective = new
+		steal_objective.owner = chosen_guard.mind
+		steal_objective.steal_target = /obj/item/roguegem/jewel
+		steal_objective.explanation_text = "Steal the Baron's Crown Jewel from the treasury."
+		traitor_datum.objectives += steal_objective
 	
 	// Notify the guard of their objective
 	to_chat(chosen_guard, "<B>Objective:</B> [traitor_datum.objectives[1].explanation_text]")
@@ -586,28 +601,34 @@ GLOBAL_DATUM_INIT(SSroundstart_events, /datum/controller/subsystem/roundstart_ev
 /datum/round_event/roundstart/matriarchy/apply_effect()
 	. = ..()
 	
-	// Find the Baron and Consort
-	var/mob/living/carbon/human/baron
+	// Find the Consort and Baron
 	var/mob/living/carbon/human/consort
+	var/mob/living/carbon/human/baron
 	
 	for(var/mob/living/carbon/human/H in GLOB.alive_mob_list)
-		if(H.mind?.assigned_role == "Baron" || H.mind?.assigned_role == "Baroness")
-			baron = H
-		else if(H.mind?.assigned_role == "Consort")
+		if(H.mind?.assigned_role == "Consort")
 			consort = H
+			break
 	
-	// If either is missing, remove this event and try to select another
-	if(!baron || !consort)
+	// If the consort is missing, remove this event and try to select another
+	if(!consort)
+		// Don't set is_active to TRUE since we're aborting
+		message_admins("Matriarchy event failed: Missing Consort")
+		// Remove this event from active events since we added it in parent call
+		GLOB.active_roundstart_events -= src
+		// Make the event not runnable for future selections
 		for(var/datum/round_event_control/E in SSevents.control)
 			if(istype(E, /datum/round_event_control/roundstart/matriarchy))
 				var/datum/round_event_control/roundstart/matriarchy/ME = E
 				ME.runnable = FALSE
-				message_admins("Matriarchy event failed: Missing [!baron ? "Baron/Baroness" : ""][!baron && !consort ? " and " : ""][!consort ? "Consort" : ""]")
-				addtimer(CALLBACK(SSevents, /datum/controller/subsystem/events/proc/spawnEvent), 0)
-				return
-	
+		// Force pick a new event
+		GLOB.SSroundstart_events.has_fired = FALSE
+		GLOB.SSroundstart_events.pick_roundstart_event()
+		GLOB.SSroundstart_events.fire_event()
+		return
+
 	is_active = TRUE
-		// Find the Baron and Consort
+	// Find the Baron and Consort
 	for(var/mob/living/carbon/human/H in GLOB.alive_mob_list)
 		if(H.mind?.assigned_role == "Baron" || H.mind?.assigned_role == "Baroness")
 			baron = H
@@ -634,30 +655,30 @@ GLOBAL_DATUM_INIT(SSroundstart_events, /datum/controller/subsystem/roundstart_ev
 	consort.job = "Consort-Regnant"
 	
 	// Swap their spells
-	var/list/baron_spells = list()
-	var/list/consort_spells = list()
+	var/list/baron_spell_types = list()
+	var/list/consort_spell_types = list()
 	
-	// Store baron's spells
+	// Store baron's spell types
 	if(baron.mind)
-		baron_spells = baron.mind.spell_list.Copy()
-		for(var/obj/effect/proc_holder/spell/S in baron_spells)
+		for(var/obj/effect/proc_holder/spell/S in baron.mind.spell_list)
+			baron_spell_types += S.type
 			baron.mind.RemoveSpell(S)
 	
-	// Store consort's spells
+	// Store consort's spell types
 	if(consort.mind)
-		consort_spells = consort.mind.spell_list.Copy()
-		for(var/obj/effect/proc_holder/spell/S in consort_spells)
+		for(var/obj/effect/proc_holder/spell/S in consort.mind.spell_list)
+			consort_spell_types += S.type
 			consort.mind.RemoveSpell(S)
 	
 	// Give baron's spells to consort
-	for(var/obj/effect/proc_holder/spell/S in baron_spells)
-		if(consort.mind)
-			consort.mind.AddSpell(S)
+	if(consort.mind)
+		for(var/spell_type in baron_spell_types)
+			consort.mind.AddSpell(new spell_type())
 	
 	// Give consort's spells to baron
-	for(var/obj/effect/proc_holder/spell/S in consort_spells)
-		if(baron.mind)
-			baron.mind.AddSpell(S)
+	if(baron.mind)
+		for(var/spell_type in consort_spell_types)
+			baron.mind.AddSpell(new spell_type())
 	
 	// Transfer crown
 	var/obj/item/clothing/head/crown = baron.get_item_by_slot(SLOT_HEAD)
@@ -685,6 +706,9 @@ GLOBAL_DATUM_INIT(SSroundstart_events, /datum/controller/subsystem/roundstart_ev
 	
 	// Give the color choice to the consort instead
 	addtimer(CALLBACK(consort, TYPE_PROC_REF(/mob, lord_color_choice)), 50)
+	
+	// Update SSticker to recognize the consort as ruler
+	SSticker.rulermob = consort
 
 /datum/round_event_control/roundstart/matriarchy
 	name = "Regnant"

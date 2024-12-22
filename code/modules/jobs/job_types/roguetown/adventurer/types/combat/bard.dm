@@ -2,10 +2,10 @@
 /datum/advclass/bard
 	name = "Bard"
 	tutorial = "Bards make up one of the largest populations of \
-	registered adventurers in Enigma, mostly because they are \
+	registered adventurers in Umbra Veil, mostly because they are \
 	the last ones in a party to die. Their wish is to experience \
 	the greatest adventures of the age and write amazing songs about them. \
-	The class has the option between the jack of all trades Bard, the martial-focused Skald, magic-equip arcanist, and the gospel Hymnist." //Fablefield updated for Hymnist
+	The class has the option between the jack of all trades Bard, the martial-focused Skald, magic-equip arcanist, and the gospel Hymnist." //Somberwicke updated for Hymnist
 	allowed_sexes = list(MALE, FEMALE)
 	allowed_races = RACES_ALL_KINDS
 	outfit = /datum/outfit/job/roguetown/adventurer/bard
@@ -141,7 +141,7 @@
 			H.change_stat("speed", 2)
 			H.mind.AddSpell(new /obj/effect/proc_holder/spell/invoked/mockery)
 		if("Hymnist") //Azure Peak Update, Miracles and some utility skills, less combat prowess
-			to_chat(H, span_warning("The tales of the gods are mighty indeed, though your skill in their retelling through song has granted you a touch of their favor as thanks."))
+			to_chat(H, span_warning("The tales of god are mighty indeed, though your skill in their retelling through song has granted you a touch of their favor as thanks."))
 			H.mind.adjust_skillrank(/datum/skill/combat/wrestling, 2, TRUE)
 			H.mind.adjust_skillrank(/datum/skill/combat/unarmed, 1, TRUE)
 			H.mind.adjust_skillrank(/datum/skill/misc/athletics, 2, TRUE)
@@ -171,7 +171,7 @@
 			beltr = /obj/item/rogueweapon/huntingknife/idagger
 			switch(H.patron?.type)
 				if(/datum/patron/divine/astrata)
-					neck = /obj/item/clothing/neck/roguetown/psicross/astrata
+					neck = /obj/item/clothing/neck/roguetown/psicross/
 				if(/datum/patron/divine/noc)
 					neck = /obj/item/clothing/neck/roguetown/psicross/noc
 				if(/datum/patron/divine/dendor)

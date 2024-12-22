@@ -19,7 +19,8 @@
 	max_pq = null
 	round_contrib_points = 2
 
-	cmode_music = 'sound/music/combat_routier.ogg'
+	cmode_music = 'sound/music/combat_knight.ogg'
+	family_blacklisted = TRUE
 
 /datum/outfit/job/roguetown/huskar/pre_equip(mob/living/carbon/human/H)
 	. = ..()
@@ -55,7 +56,6 @@
 		H.change_stat("speed", -1)
 
 /datum/outfit/job/roguetown/huskar
-	wrists = /obj/item/clothing/wrists/roguetown/bracers
 	belt = /obj/item/storage/belt/rogue/leather
 	beltl = /obj/item/storage/keyring/guardcastle
 	beltr = /obj/item/rogueweapon/sword/falchion

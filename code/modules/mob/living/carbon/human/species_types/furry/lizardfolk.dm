@@ -5,11 +5,14 @@
 	name = "Sissean"
 	id = "lizardfolk"
 	desc = "<b>Sissean</b><br>\
-	Sisseans are semi-aquatic reptilian humanoids.\
-	Their skin is covered in scales and varied in color from dark green through to shades of brown and gray.\
-	Taller than humans and powerfully built, sisseans are often between 6 and 7 feet tall.\
-	Sisseans have non-prehensile muscular tails that grow to three or four feet in length, and these are used for balance.\
-	They also have sharp claws and teeth."
+	The Sissians have long inhabited the swamps, marshes, and arid badlands, honing their \
+	survival instincts, developing a deep respect for the natural world and it's cycles. \
+	However, the rise of necromancy changed everything. The once-bountiful swamps and deserts \
+	they called home have withered.<br><br>\
+	Once a proud and independent race, now found themselves relegated to the outskirts of human \
+	society, surviving on the fringes as laborers, mercenaries, or traders, waiting for the day \
+	they might reclaim their land.<br><br>\
+	+1 Constitution."
 	skin_tone_wording = "Skin Colors"
 	species_traits = list(EYECOLOR,LIPS,STUBBLE,MUTCOLORS)
 	possible_ages = ALL_AGES_LIST
@@ -63,14 +66,13 @@
 		/datum/customizer/bodypart_feature/hair/facial/humanoid/shaved_default,
 		/datum/customizer/bodypart_feature/accessory,
 		/datum/customizer/bodypart_feature/face_detail,
-		/datum/customizer/bodypart_feature/underwear,
 		/datum/customizer/organ/tail/lizard,
 		/datum/customizer/organ/tail_feature/lizard_spines,
 		/datum/customizer/organ/snout/lizard,
 		/datum/customizer/organ/frills/lizard,
 		/datum/customizer/organ/horns/humanoid/sissean,
-		/datum/customizer/organ/testicles/anthro,
-		/datum/customizer/organ/penis/anthro,
+		/datum/customizer/organ/testicles/human,
+		/datum/customizer/organ/penis/human,
 		/datum/customizer/organ/breasts/animal,
 		/datum/customizer/organ/vagina/animal,
 		)

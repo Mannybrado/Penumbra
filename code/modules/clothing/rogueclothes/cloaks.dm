@@ -1156,8 +1156,8 @@
 	flags_inv = HIDECROTCH|HIDEBOOB
 
 /obj/item/clothing/cloak/templar/eora
-	name = "eora tabard"
-	desc = "An outer garment commonly worn by soldiers. This one has the symbol of Eora on it."
+	name = "heart tabard"
+	desc = "An outer garment commonly worn by soldiers. This one has a heart symbol on it."
 	icon_state = "tabard_eora"
 	alternate_worn_layer = TABARD_LAYER
 	body_parts_covered = CHEST|GROIN
@@ -1268,7 +1268,7 @@
 		return
 	active_item = TRUE
 	if(user.mind.special_role == "Bandit")
-		to_chat(user, span_notice("I feel bolstered by Matthios Power!..."))
+		to_chat(user, span_notice("I feel bolstered by ZIZO's Power!..."))
 		user.change_stat("strength", 2)
 		user.change_stat("perception", 2)
 		user.change_stat("intelligence", 2)
@@ -1286,7 +1286,7 @@
 		return
 	active_item = FALSE
 	if(user.mind.special_role == "Bandit")
-		to_chat(user, span_notice("I've removed the necklace of Matthios..."))
+		to_chat(user, span_notice("I've removed the necklace of Zizo..."))
 		user.change_stat("strength", -2)
 		user.change_stat("perception", -2)
 		user.change_stat("intelligence", -2)

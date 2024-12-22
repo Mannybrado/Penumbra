@@ -6,7 +6,7 @@
 	faction = "Station"
 	tutorial = "You are a fanatical servant of an obscure order, willingly beholden with obeisance to the Inquisitor. In other words, you are a tool of violence wielded against a corrupting evil."
 	allowed_sexes = list(MALE, FEMALE)
-	allowed_races = RACES_ALL_KINDS
+	allowed_races = RACES_CHURCH
 	allowed_patrons = ALL_DIVINE_PATRONS
 	outfit = /datum/outfit/job/roguetown/templar
 	min_pq = 0 
@@ -34,28 +34,21 @@
 		
 		// Find the Inquisitor and their class
 		var/inquisitor_class
-		if(!latejoin)
-			// During roundstart, check Inquisitor preferences
-			for(var/mob/dead/new_player/P in GLOB.new_player_list)
-				if(P.client?.prefs?.job_preferences["Inquisitor"] == JP_HIGH)
-					inquisitor_class = P.client.prefs.inquisitor_class
+		// Check actual Inquisitors
+		for(var/mob/living/carbon/human/inq in GLOB.human_list)
+			if(inq.mind?.assigned_role == "Inquisitor")
+				if(inq.client?.prefs?.inquisitor_class)
+					inquisitor_class = inq.client.prefs.inquisitor_class
 					break
-		else
-			// During latejoin, check actual Inquisitors
-			for(var/mob/living/carbon/human/inq in GLOB.human_list)
-				if(inq.mind?.assigned_role == "Inquisitor")
-					if(inq.client?.prefs?.inquisitor_class)
-						inquisitor_class = inq.client.prefs.inquisitor_class
-					break
-			if(!inquisitor_class)
-				for(var/datum/mind/mind in SSticker.minds)
-					if(mind.assigned_role == "Inquisitor")
-						var/client/inq_client = GLOB.directory[mind.key]
-						if(inq_client?.prefs?.inquisitor_class)
-							inquisitor_class = inq_client.prefs.inquisitor_class
-							break
+		if(!inquisitor_class)
+			for(var/datum/mind/mind in SSticker.minds)
+				if(mind.assigned_role == "Inquisitor")
+					var/client/inq_client = GLOB.directory[mind.key]
+					if(inq_client?.prefs?.inquisitor_class)
+						inquisitor_class = inq_client.prefs.inquisitor_class
+						break
 		
-		// Determine Templar class based on Inquisitor class
+		// Determine Occultist class based on Inquisitor class
 		var/class_type
 		if(!inquisitor_class || inquisitor_class == "random") // Handle random/unset class preference
 			class_type = pick(/datum/advclass/templar/monk, /datum/advclass/templar/crusader, /datum/advclass/templar/hunter)

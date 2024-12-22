@@ -45,26 +45,42 @@
 	return ..()
 
 /mob/proc/handle_typing_indicator()
-	if(!client || stat)
+	if(!client || !istype(client))
 		set_typing_indicator(FALSE)
 		return
 
-
-
-
-	var/temp = winget(client, "input", "text")
-
-	var/command = winget(client,"input","command")
-	if(command == "" || command + temp == "say \"")
-		set_typing_indicator(0)
+	if(isnull(client.mob))
+		set_typing_indicator(FALSE)
 		return
 
-	last_typed_time = world.time
-
-	if (world.time > last_typed_time + TYPING_INDICATOR_LIFETIME)
-		set_typing_indicator(0)
+	if(stat)
+		set_typing_indicator(FALSE)
 		return
-	else if(length(temp) > 0)
-		set_typing_indicator(TRUE,"hTy")
+
+	try
+		var/temp = winget(client, "input", "text")
+		
+		// For me verbs, keep the indicator up while hud_typing is true
+		if(hud_typing)
+			set_typing_indicator(TRUE)
+			return
+
+		// For regular chat
+		if(temp != last_typed)  // Only update if the text has changed
+			last_typed = temp
+			last_typed_time = world.time
+			if(temp != "")  // If there's text, show the indicator
+				set_typing_indicator(TRUE)
+		else if(world.time > last_typed_time + TYPING_INDICATOR_LIFETIME)  // Clear if we haven't typed recently
+			set_typing_indicator(FALSE)
+
+	catch
+		set_typing_indicator(FALSE)
+		return
+
+/mob/Move(NewLoc, direct)
+	. = ..()
+	if(.)  // If the move succeeded
+		set_typing_indicator(FALSE)  // Clear typing indicator when moving
 
 

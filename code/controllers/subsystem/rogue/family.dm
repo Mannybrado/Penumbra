@@ -2,6 +2,7 @@
 #define REL_TYPE_SIBLING 2
 #define REL_TYPE_PARENT 3
 #define REL_TYPE_OFFSPRING 4
+#define REL_TYPE_RELATIVE 5
 
 SUBSYSTEM_DEF(family)
 	name = "family"
@@ -40,6 +41,21 @@ SUBSYSTEM_DEF(family)
 				rel_images += I
 
 
+/datum/controller/subsystem/family/proc/makeFamily(var/mob/living/carbon/human/head,var/name)
+	var/i = 0
+	while(!name || used_names.Find(name))
+		i++
+		name = pick(strings("family.json","prefix")) + "-" + pick(strings("family.json","title"))
+		if(i == 100)
+			name += " the [pick("ill","unfortunate")] lucked" //fallback on the impossible chance it CANNOT make a unique name.
+
+	var/datum/family/F = new()
+	F.name = name
+	used_names += name
+	F.addMember(head)
+
+	return F
+
 /datum/controller/subsystem/family/proc/SetupFamilies()
 	if(!length(family_candidates))
 		return
@@ -59,16 +75,7 @@ SUBSYSTEM_DEF(family)
 		var/mob/living/carbon/head = pick(head_candidates)
 
 		if(head)
-			var/datum/family/F = new()
-			var/family_name
-			var/i = 0
-			while(!family_name || used_names.Find(family_name))
-				family_name = pick(strings("family.json","prefix")) + "-" + pick(strings("family.json","title"))
-				if(i == 100)
-					family_name += " the [pick("ill","unfortunate")] lucked" //fallback on the impossible chance it CANNOT make a unique name.
-			F.name = family_name
-			used_names += family_name
-			F.addMember(head)
+			var/datum/family/F = makeFamily(head)
 			current_families += F
 			family_candidates -= head
 			head_candidates -= head
@@ -86,7 +93,7 @@ SUBSYSTEM_DEF(family)
 					var/rel_type = F.tryConnect(H,connecting_member)
 					if(F.checkFamilyCompat(H,connecting_member,rel_type)) //suitable. Add them to the family and connect them.
 						F.addMember(H)
-						F.addRel(H,connecting_member,rel_type,TRUE)
+						F.addRel(H,connecting_member,getMatchingRel(rel_type),TRUE)
 						F.addRel(connecting_member,H,rel_type,TRUE)
 
 						current_families -= F
@@ -98,7 +105,81 @@ SUBSYSTEM_DEF(family)
 			qdel(F)
 
 
+/datum/controller/subsystem/family/proc/SetupLordFamily()
+	var/datum/family/lord_family
+	var/mob/living/carbon/human/lord
+	var/mob/living/carbon/human/lady //stored separate as they have to be added before the children.
+	var/list/children = list()
 
+
+	for(var/mob/living/carbon/human/H in GLOB.mob_list)
+		if(!H.client) //Needed because the preference menu makes dummy humans.
+			continue
+		var/datum/job/J = SSjob.GetJob(H.job)
+		if(!J || !J.lord_family)
+			continue
+		if(istype(J,/datum/job/roguetown/lord))
+			if(!lord)
+				lord = H
+				lord_family = makeFamily(lord, GLOB.lordsurname)
+		else if(istype(J,/datum/job/roguetown/lady))
+			lady = H
+		else
+			children |= H
+
+	if(!lord_family)
+		return
+
+	var/list/family_list = list(lady)
+
+	family_list += children
+
+	for(var/m in family_list)
+		if(!m)
+			continue
+		var/mob/living/carbon/human/H = m
+
+		lord_family.addMember(H)
+
+		var/datum/job/J = SSjob.GetJob(H.job)
+		var/rel_type = J.lord_rel_type
+		if(rel_type != REL_TYPE_SPOUSE) //Genitals are already checked when the job is assigned. Ane we ignore both the Lord's & Consort's attraction prefs.
+			if(!lord_family.checkFamilyCompat(H,lord,J.lord_rel_type)) //They're not suitible for their assigned relation type.
+				if(rel_type == REL_TYPE_OFFSPRING && lord_family.checkFamilyCompat(H,lord,REL_TYPE_SIBLING)) //Fallback, if they can't be children. Check if they can be siblings.
+					rel_type = REL_TYPE_SIBLING
+				else
+					rel_type = REL_TYPE_RELATIVE
+
+		lord_family.addRel(H,lord,rel_type,TRUE)
+		lord_family.addRel(lord,H,getMatchingRel(rel_type),TRUE)
+
+
+	for(var/ref in lord_family.members) //loop through all other members and connect them.
+		if(ref == lord_family.members[1]) //skip the lord.
+			continue
+		var/mob/living/carbon/human/H = lord_family.members[ref]:resolve()
+		var/datum/relation/H_rel = lord_family.getTrueRel(lord,H)
+
+		for(var/ref2 in lord_family.members)
+			if(ref2 == lord_family.members[1] || ref2 == ref) //skip the lord and first member.
+				continue
+			var/mob/living/carbon/human/HH = lord_family.members[ref2]:resolve()
+			var/datum/relation/HH_rel = lord_family.getTrueRel(lord,HH)
+
+			var/new_rel = REL_TYPE_RELATIVE
+			switch(H_rel.rel_type)
+				if(REL_TYPE_SPOUSE)
+					switch(HH_rel.rel_type)
+						if(REL_TYPE_OFFSPRING)
+							new_rel = REL_TYPE_PARENT
+				if(REL_TYPE_OFFSPRING)
+					switch(HH_rel.rel_type)
+						if(REL_TYPE_OFFSPRING)
+							new_rel = REL_TYPE_SIBLING
+						if(REL_TYPE_SPOUSE)
+							new_rel = REL_TYPE_OFFSPRING
+
+			lord_family.addRel(H,HH,new_rel,TRUE)
 
 /datum/family
 	var/name = "ERROR"
@@ -112,11 +193,15 @@ SUBSYSTEM_DEF(family)
 /datum/family/Destroy()
 	.=..()
 	for(var/N in members)
+		if(isnull(N))
+			continue
 		var/mob/living/carbon/human/H = members[N]:resolve()
 		if(H)
 			H.family = null
 
 	for(var/rel in relations)
+		if(isnull(rel))
+			continue
 		var/datum/relation/R = rel
 		R.holder = null
 		R.target = null
@@ -125,7 +210,7 @@ SUBSYSTEM_DEF(family)
 /datum/family/proc/getRelations(var/mob/living/carbon/human/member,var/rel_type) //Returns all relations of the specified type.
 	var/list/rels = list()
 	for(var/datum/relation/R in relations)
-		if(R.holder == member && (!rel_type || R.type == rel_type))
+		if(R.holder == WEAKREF(member) && (!rel_type || R.rel_type == rel_type))
 			rels += R
 
 	return rels
@@ -136,15 +221,28 @@ SUBSYSTEM_DEF(family)
 		if(WEAKREF(holder) == R.holder && members[target.name] == R.target)
 			return R
 
+/datum/family/proc/getTrueRel(var/mob/living/carbon/human/holder,var/mob/living/carbon/human/target) //Returns true relationship shared by holder & target.
+	for(var/datum/relation/R in relations)
+		if(WEAKREF(holder) == R.holder && WEAKREF(target) == R.target)
+			return R
+
 /datum/family/proc/addRel(var/mob/living/carbon/human/target, var/mob/living/carbon/human/holder,var/rel_type, var/announce = FALSE) //creates a relation for two members.
 	var/datum/relation/R
-	switch(rel_type)
-		if(REL_TYPE_SPOUSE)
-			R = new /datum/relation/spouse(holder,target)
+	var/list/rel_types = typesof(/datum/relation)
+	for(var/type in rel_types)
+		var/datum/relation/T = type
+		if(T::rel_type == rel_type)
+			R = new T(holder,target)
 
+	if(!R)
+		R = new /datum/relation/relative(holder,target)
 	relations += R
+
 	if(announce)
-		to_chat(holder,"<span class='notice'>My [R.getName()]. [target.real_name] ([target.age]) is here alongside me.</span>")
+		spawn(1)
+			to_chat(holder,"<span class='notice'>My [R.name]. [target.real_name] ([target.dna.species.name], [target.job], [target.age]) is here alongside me.</span>")
+
+		R.onConnect(holder,target) //Bit of hack to have this here. But it stops church marriages from being given rings.
 
 /datum/family/proc/tryConnect(var/mob/living/carbon/human/target, var/mob/living/carbon/human/member) //Gets the rel_type for the targets. For now, it only returns spouse.
 	return REL_TYPE_SPOUSE
@@ -168,25 +266,70 @@ SUBSYSTEM_DEF(family)
 				if(member.getorganslot(G) && target.getorganslot(G))
 					return FALSE
 
+			var/list/age_values = AGE_VALUES
+			var/target_value = age_values[target.age]
+			var/member_value = age_values[member.age]
+			if(max(member_value,target_value) - min(member_value,target_value) > 1) //Too high an age difference.
+				return FALSE
+
 			return TRUE //suitable.
+
+		if(REL_TYPE_SIBLING)
+			var/list/age_values = AGE_VALUES
+			var/target_value = age_values[target.age]
+			var/member_value = age_values[member.age]
+			if(max(member_value,target_value) - min(member_value,target_value) > 1) //Too high an age difference.
+				return FALSE
+
+			if(target.dna.species.type != member.dna.species.type)
+				return FALSE
+
+			return TRUE
+
+		if(REL_TYPE_RELATIVE)
+			return TRUE
 
 
 		if(REL_TYPE_OFFSPRING)
+			var/list/age_values = AGE_VALUES
+			var/target_value = age_values[target.age]
+			var/member_value = age_values[member.age]
+			if(member_value - target_value > 1) //Too high an age difference.
+				return FALSE
 			var/list/allowed_species = list(member.dna.species.type)
-			var/datum/relation/R = getRelations(member,REL_TYPE_SPOUSE)[1]
-			var/mob/living/carbon/human/spouse = members[R.target]:resolve()
-			if(spouse.dna.species.type != member.dna.species.type) //Parents have different species. Allow half children.
-				allowed_species |= member.dna.species.halfchild_types[spouse.dna.species.id]
+
+			var/datum/relation/R
+			var/mob/living/carbon/human/spouse
+			var/list/rel_list = getRelations(member,REL_TYPE_SPOUSE)
+
+			if(length(rel_list))
+				R = rel_list[1]
+
+			if(R)
+				spouse = members[R.target]:resolve()
+			if(spouse)
+				if(spouse.dna.species.type != member.dna.species.type) //Parents have different species. Allow half children.
+					allowed_species |= member.dna.species.halfchild_types[spouse.dna.species.id]
 
 			if(!target.dna.species.type in allowed_species)
 				return FALSE
 			return TRUE
 
 		else
-			if(istype(target.dna.species,member.dna.species.type)) //Same species? Can always be in a family. (Note: This needs to be changed if mixed race partners shouldn't be allowed to have full race children.)
+			if(istype(target.dna.species,member.dna.species.type)) //Same species? Can always be in a family.
 				return TRUE
 
 	return FALSE
+
+
+proc/getMatchingRel(var/rel_type)
+	switch(rel_type)
+		if(REL_TYPE_PARENT)
+			return REL_TYPE_OFFSPRING
+		if(REL_TYPE_OFFSPRING)
+			return REL_TYPE_PARENT
+		else
+			return rel_type
 
 /datum/family/proc/addMember(var/mob/living/carbon/human/H)
 	members[H.real_name] = WEAKREF(H)
@@ -213,15 +356,19 @@ SUBSYSTEM_DEF(family)
 	var/holder //The holder of the relationship.
 	var/target //Who the relationship applies to. Example: Holder is husband, target is Wife.
 	var/rel_type
-	var/rel_state = "blood"
+	var/rel_state = "rel"
 
 /datum/relation/proc/getName()
-	return "Name"
+	return name
+
+
+/datum/relation/proc/onConnect(var/mob/living/carbon/human/holder,var/mob/living/carbon/human/target)
+	return
 
 /datum/relation/New(var/mob/living/carbon/human/H,var/mob/living/carbon/human/T)
 	holder = WEAKREF(H)
 	target = WEAKREF(T)
-
+	name = getName() //Done once to prevent any organ changes from changing the name.
 
 /datum/relation/spouse
 	name = "Spouse"
@@ -237,10 +384,89 @@ SUBSYSTEM_DEF(family)
 			return "Wife"
 	return "Spouse"
 
+/datum/relation/spouse/onConnect(var/mob/living/carbon/human/holder,var/mob/living/carbon/human/target)
+	var/datum/job/holder_job = SSjob.GetJob(holder.job)
+
+	// Only give rings to non-baron/consort spouses.
+	if(istype(holder_job, /datum/job/roguetown/lord) || istype(holder_job, /datum/job/roguetown/lady))
+		return
+
+	// Handle existing rings before equipping new one
+	if(holder.wear_ring)
+		// Try to store in belt first
+		var/obj/item/storage/belt = holder.get_item_by_slot(SLOT_BELT)
+		if(istype(belt) && SEND_SIGNAL(belt, COMSIG_TRY_STORAGE_INSERT, holder.wear_ring, holder))
+			to_chat(holder, span_notice("I store my old ring in my belt."))
+		else
+			// Try backpack slots if belt storage fails
+			var/obj/item/storage/backpack/backr = holder.get_item_by_slot(SLOT_BACK_R)
+			if(istype(backr) && SEND_SIGNAL(backr, COMSIG_TRY_STORAGE_INSERT, holder.wear_ring, holder))
+				to_chat(holder, span_notice("I store my old ring in my right backpack."))
+			else
+				var/obj/item/storage/backpack/backl = holder.get_item_by_slot(SLOT_BACK_L)
+				if(istype(backl) && SEND_SIGNAL(backl, COMSIG_TRY_STORAGE_INSERT, holder.wear_ring, holder))
+					to_chat(holder, span_notice("I store my old ring in my left backpack."))
+				else
+					holder.dropItemToGround(holder.wear_ring)
+					to_chat(holder, span_warning("I had to drop my old ring."))
+
+	// Create and equip new soulring for both spouses
+	var/obj/item/clothing/ring/soul/ring = new(holder, target.real_name)
+	holder.equip_to_slot_if_possible(ring, SLOT_RING)
+
+
+/datum/relation/sibling
+	name = "Sibling"
+	rel_type = REL_TYPE_SIBLING
+
+/datum/relation/sibling/getName()
+	var/mob/living/carbon/human/T = target:resolve()
+	if(T)
+		if(T.getorganslot(ORGAN_SLOT_PENIS))
+			return "Brother"
+		if(T.getorganslot(ORGAN_SLOT_VAGINA))
+			return "Sister"
+	return "Sibling"
+
+
+/datum/relation/parent
+	name = "Parent"
+	rel_type = REL_TYPE_PARENT
+
+/datum/relation/parent/getName()
+	var/mob/living/carbon/human/T = target:resolve()
+	if(T)
+		if(T.getorganslot(ORGAN_SLOT_PENIS))
+			return "Father"
+		if(T.getorganslot(ORGAN_SLOT_VAGINA))
+			return "Mother"
+	return "Parent"
+
+
+/datum/relation/offspring
+	name = "Child"
+	rel_type = REL_TYPE_OFFSPRING
+
+/datum/relation/offspring/getName()
+	var/mob/living/carbon/human/T = target:resolve()
+	if(T)
+		if(T.getorganslot(ORGAN_SLOT_PENIS))
+			return "Son"
+		if(T.getorganslot(ORGAN_SLOT_VAGINA))
+			return "Daughter"
+	return "Child"
+
+/datum/relation/relative
+	name = "Relative"
+	rel_type = REL_TYPE_RELATIVE
+	rel_state = "rel2"
+
 /mob/living/carbon/human/proc/getFamily(var/true_family = FALSE)//Returns the family src belongs to. By default. We use our names + DNA to support people pretending to be family members. Use true_family if you wish to get their ACTUAL family.
 	if(true_family)
 		return family
 	for(var/f in SSfamily.families)
+		if(isnull(f))
+			continue
 		var/datum/family/F = f
 		if(F.members.Find(name) && dna.uni_identity == family.member_identity[name])
 			return F
@@ -266,3 +492,5 @@ SUBSYSTEM_DEF(family)
 		return
 
 	return family.getRel(src,target)
+
+

@@ -3,11 +3,11 @@
 	flag = SQUIRE
 	department_flag = YOUNGFOLK
 	faction = "Station"
-	total_positions = 4
-	spawn_positions = 4
+	total_positions = 2
+	spawn_positions = 2
 	allowed_races = RACES_ALL_KINDS
 	allowed_sexes = list(MALE, FEMALE)
-	allowed_ages = list(AGE_ADULT)
+	allowed_ages = list(AGE_YOUNG, AGE_ADULT)
 	advclass_cat_rolls = list(CTAG_SQUIRE = 20)
 
 	tutorial = "Your folks said you were going to be something, they had better aspirations for you than the life of a peasant. You practiced the basics \
@@ -29,60 +29,65 @@
 
 /datum/job/roguetown/squire/after_spawn(mob/living/L, mob/M, latejoin = TRUE)
 	. = ..()
-	if(L && M?.client)
-		var/mob/living/carbon/human/H = L
-		var/list/valid_classes = list()
-		var/preferred_class = M.client?.prefs?.squire_class
+	if(!L || !istype(L) || !M)
+		return
+	
+	var/mob/living/carbon/human/H = L
+	if(!istype(H))
+		return
+		
+	var/list/valid_classes = list()
+	var/preferred_class = M.client?.prefs?.squire_class
 
-		// Build list of valid classes for this character
-		for(var/type in subtypesof(/datum/advclass/squire))
-			var/datum/advclass/squire/AC = new type()
-			if(!AC.name)
-				qdel(AC)
-				continue
-			
-			// Check if class is allowed for this player
-			if(AC.allowed_sexes?.len && !(H.gender in AC.allowed_sexes))
-				qdel(AC)
-				continue
-			if(AC.allowed_races?.len && !(H.dna.species.type in AC.allowed_races))
-				qdel(AC)
-				continue
-			if(AC.min_pq != -100 && !(get_playerquality(M.client.ckey) >= AC.min_pq))
-				qdel(AC)
-				continue
-			
-			valid_classes[AC.name] = AC
+	// Build list of valid classes for this character
+	for(var/type in subtypesof(/datum/advclass/squire))
+		var/datum/advclass/squire/AC = new type()
+		if(!AC.name)
+			qdel(AC)
+			continue
 
-		// If no valid classes found, something is wrong
-		if(!length(valid_classes))
-			to_chat(M, span_warning("No valid classes found! Please report this to an admin."))
-			return
+		// Check if class is allowed for this player
+		if(AC.allowed_sexes?.len && !(H.gender in AC.allowed_sexes))
+			qdel(AC)
+			continue
+		if(AC.allowed_races?.len && !(H.dna.species.type in AC.allowed_races))
+			qdel(AC)
+			continue
+		if(AC.min_pq != -100 && !(get_playerquality(M.client.ckey) >= AC.min_pq))
+			qdel(AC)
+			continue
 
-		var/datum/advclass/squire/chosen_class
-		if(preferred_class && valid_classes[preferred_class])
-			// Use preferred class if it's valid
-			chosen_class = valid_classes[preferred_class]
-			to_chat(M, span_notice("Using your preferred class: [preferred_class]"))
-			// Clean up other classes
-			for(var/name in valid_classes)
-				if(name != preferred_class)
-					qdel(valid_classes[name])
-		else
-			// Choose random class from valid options
-			var/chosen_name = pick(valid_classes)
-			chosen_class = valid_classes[chosen_name]
-			to_chat(M, span_warning("No class preference set. You have been randomly assigned: [chosen_name]"))
-			// Clean up other classes
-			for(var/name in valid_classes)
-				if(name != chosen_name)
-					qdel(valid_classes[name])
+		valid_classes[AC.name] = AC
 
-		// Let the class handle everything through its own equipme()
-		if(chosen_class)
-			H.mind?.transfer_to(H) // Ensure mind is properly set up
-			chosen_class.equipme(H)
-			qdel(chosen_class)
+	// If no valid classes found, something is wrong
+	if(!length(valid_classes))
+		to_chat(M, span_warning("No valid classes found! Please report this to an admin."))
+		return
+
+	var/datum/advclass/squire/chosen_class
+	if(preferred_class && valid_classes[preferred_class])
+		// Use preferred class if it's valid
+		chosen_class = valid_classes[preferred_class]
+		to_chat(M, span_notice("Using your preferred class: [preferred_class]"))
+		// Clean up other classes
+		for(var/name in valid_classes)
+			if(name != preferred_class)
+				qdel(valid_classes[name])
+	else
+		// Choose random class from valid options
+		var/chosen_name = pick(valid_classes)
+		chosen_class = valid_classes[chosen_name]
+		to_chat(M, span_warning("No class preference set. You have been randomly assigned: [chosen_name]"))
+		// Clean up other classes
+		for(var/name in valid_classes)
+			if(name != chosen_name)
+				qdel(valid_classes[name])
+
+	// Let the class handle everything through its own equipme()
+	if(chosen_class)
+		H.mind?.transfer_to(H) // Ensure mind is properly set up
+		chosen_class.equipme(H)
+		qdel(chosen_class)
 
 /datum/advclass/squire/lancer
 	name = "Lancer Squire"
@@ -158,15 +163,54 @@
 	ADD_TRAIT(H, TRAIT_SQUIRE_REPAIR, TRAIT_GENERIC)
 	ADD_TRAIT(H, TRAIT_MEDIUMARMOR, TRAIT_GENERIC)
 
-	H.adjust_blindness(-3)
-	var/weapons = list("Iron Sword","Cudgel",)
-	var/weapon_choice = input("Choose your weapon.", "TAKE UP ARMS") as anything in weapons
-	H.set_blindness(0)
-	switch(weapon_choice)
+/datum/advclass/squire/footman/equipme(mob/living/carbon/human/H)
+	if(!H || !istype(H))
+		return FALSE
+	
+	// First equip the base outfit
+	if(outfit)
+		var/datum/outfit/O = new outfit
+		if(O)
+			O.equip(H)
+
+	// Wait for client to be ready (up to 5 seconds)
+	spawn(0)
+		var/tries = 0
+		while(!H?.client && tries < 10)
+			tries++
+			sleep(5)
+			
+		if(!H?.client)
+			var/classchoice = pick(list("Iron Sword", "Cudgel"))
+			apply_class_equipment(H, classchoice)
+			return
+
+		to_chat(H, span_notice("\n\nChoose your Footman Squire weapon..."))
+		var/list/choices = list("Iron Sword", "Cudgel")
+		var/classchoice = input(H, "Choose your Footman Squire weapon (30 seconds to choose)", "Weapon Selection") as anything in choices
+		
+		spawn(30 SECONDS)
+			if(!classchoice)
+				classchoice = pick(choices)
+				to_chat(H, span_warning("Time's up! Random weapon selected: [classchoice]"))
+				apply_class_equipment(H, classchoice)
+		
+		if(!classchoice)
+			classchoice = pick(choices)
+			to_chat(H, span_warning("No selection made. Random weapon selected: [classchoice]"))
+		
+		apply_class_equipment(H, classchoice)
+	
+	return TRUE
+
+/datum/advclass/squire/footman/proc/apply_class_equipment(mob/living/carbon/human/H, classchoice)
+	switch(classchoice)
 		if("Iron Sword")
-			beltr = /obj/item/rogueweapon/sword/iron
+			to_chat(H, span_warning("You are a squire trained in the art of the sword."))
+			H.equip_to_slot_or_del(new /obj/item/rogueweapon/sword/iron(H), SLOT_BELT_R)
 		if("Cudgel")
-			beltr = /obj/item/rogueweapon/mace/cudgel
+			to_chat(H, span_warning("You are a squire trained in the use of the cudgel."))
+			H.equip_to_slot_or_del(new /obj/item/rogueweapon/mace/cudgel(H), SLOT_BELT_R)
 
 /datum/advclass/squire/skirmisher
 	name = "Irregular Squire"
@@ -207,3 +251,16 @@
 		H.change_stat("speed", 2)
 	ADD_TRAIT(H, TRAIT_SQUIRE_REPAIR, TRAIT_GENERIC)
 	ADD_TRAIT(H, TRAIT_DODGEEXPERT, TRAIT_GENERIC)
+
+/datum/advclass/squire/skirmisher/equipme(mob/living/carbon/human/H)
+	if(!H || !istype(H))
+		return FALSE
+	
+	// First equip the base outfit
+	if(outfit)
+		var/datum/outfit/O = new outfit
+		if(O)
+			O.equip(H)
+	
+	apply_character_post_equipment(H, H.client)
+	return TRUE

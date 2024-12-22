@@ -117,6 +117,7 @@
 	user.playsound_local(user, 'sound/misc/mat/end.ogg', 100)
 	last_ejaculation_time = world.time
 	SSticker.cums++
+	cuckold_check()
 
 /datum/sex_controller/proc/after_intimate_climax()
 	if(user == target)
@@ -344,7 +345,7 @@
 	var/speed_name = get_speed_string()
 	dat += "<center><a href='?src=[REF(src)];task=speed_down'>\<</a> [speed_name] <a href='?src=[REF(src)];task=speed_up'>\></a> ~|~ <a href='?src=[REF(src)];task=force_down'>\<</a> [force_name] <a href='?src=[REF(src)];task=force_up'>\></a></center>"
 	dat += "<center>| <a href='?src=[REF(src)];task=toggle_finished'>[do_until_finished ? "UNTIL IM FINISHED" : "UNTIL I STOP"]</a> |</center>"
-	dat += "<center><a href='?src=[REF(src)];task=set_arousal'>SET AROUSAL</a> | <a href='?src=[REF(src)];task=freeze_arousal'>[arousal_frozen ? "UNFREEZE AROUSAL" : "FREEZE AROUSAL"]</a></center>"
+	//dat += "<center><a href='?src=[REF(src)];task=set_arousal'>SET AROUSAL</a> | <a href='?src=[REF(src)];task=freeze_arousal'>[arousal_frozen ? "UNFREEZE AROUSAL" : "FREEZE AROUSAL"]</a></center>"
 	if(target == user)
 		dat += "<center>Doing unto yourself</center>"
 	else
@@ -400,11 +401,11 @@
 			adjust_force(-1)
 		if("toggle_finished")
 			do_until_finished = !do_until_finished
-		if("set_arousal")
+	/*	if("set_arousal")
 			var/amount = input(user, "Value above 120 will immediately cause orgasm!", "Set Arousal", arousal) as num|null
 			set_arousal(amount)
 		if("freeze_arousal")
-			arousal_frozen = !arousal_frozen
+			arousal_frozen = !arousal_frozen*/
 	show_ui()
 
 /datum/sex_controller/proc/try_stop_current_action()
@@ -612,3 +613,25 @@
 			return "<span class='love_high'>[string]</span>"
 		if(SEX_FORCE_EXTREME)
 			return "<span class='love_extreme'>[string]</span>"
+
+
+/datum/sex_controller/proc/cuckold_check()
+	if(!target || target == user)
+		return
+	//First, check if the target has a family.
+	var/datum/family/F = target.getFamily(TRUE)
+	if(!F)
+		return
+
+
+	//Second, check if target has a spouse relation.
+	var/list/rels = F.getRelations(target,REL_TYPE_SPOUSE)
+
+	if(!length(rels))
+		return
+
+	for(var/datum/relation/R in rels) //Loop through all the spouses (Should only be one.)
+		var/mob/living/carbon/human/cuckold = R.target:resolve()
+		if(!cuckold || cuckold == user)
+			continue
+		GLOB.cuckolds |= "[cuckold.job] [cuckold.real_name] (by [user.real_name])"
