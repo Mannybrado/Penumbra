@@ -42,6 +42,8 @@
 	icon_state = "weird1"
 /turf/open/floor/rogue/ruinedwood/chevron
 	icon_state = "weird2"
+/turf/open/floor/rogue/ruinedwood/blackchevron
+	icon_state = "weird3"
 
 /turf/open/floor/rogue/ruinedwood/platform
 	name = "platform"

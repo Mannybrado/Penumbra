@@ -211,6 +211,10 @@
 	floor_tile = /obj/item/stack/tile/carpet/black
 	canSmoothWith = list(/turf/open/floor/carpet/black, /turf/open/floor/carpet/airless)
 
+/turf/open/floor/carpet/grim
+	icon = 'icons/turf/floors/carpet_grim.dmi'
+	canSmoothWith = /turf/open/floor/carpet/black
+
 /turf/open/floor/carpet/blue
 	icon = 'icons/turf/floors/carpet_blue.dmi'
 	floor_tile = /obj/item/stack/tile/carpet/blue
