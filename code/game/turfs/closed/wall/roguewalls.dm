@@ -280,7 +280,33 @@
 /turf/closed/wall/mineral/rogue/decostone/fluffstone
 	icon_state = "fluffstone"
 
+/turf/closed/wall/mineral/rogue/decostone/d
+	name = "decorated stone wall"
+	desc = "The mason did an excellent job etching details into this wall."
+	icon = 'icons/turf/roguewall.dmi'
+	icon_state = "ddecostone-b"
+	smooth = SMOOTH_MORE
+	blade_dulling = DULLING_BASH
+	max_integrity = 1800
+	sheet_type = /obj/item/natural/stone
+	break_sound = 'sound/combat/hits/onstone/stonedeath.ogg'
+	attacked_sound = list('sound/combat/hits/onstone/wallhit.ogg', 'sound/combat/hits/onstone/wallhit2.ogg', 'sound/combat/hits/onstone/wallhit3.ogg')
+	above_floor = /turf/open/floor/rogue/blocks
+	baseturfs = list(/turf/open/floor/rogue/blocks)
+	neighborlay = "dirtedge"
+	climbdiff = 3
 
+/turf/closed/wall/mineral/rogue/decostone/d/long
+	icon_state = "ddecostone-l"
+
+/turf/closed/wall/mineral/rogue/decostone/d/center
+	icon_state = "ddecostone-c"
+
+/turf/closed/wall/mineral/rogue/decostone/d/end
+	icon_state = "ddecostone-e"
+
+/turf/closed/wall/mineral/rogue/decostone/d/cand
+	icon_state = "ddecostone-cand"
 
 
 /turf/closed/wall/shroud //vines
