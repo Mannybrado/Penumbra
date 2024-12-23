@@ -1227,3 +1227,21 @@
 	clawfootstep = FOOTSTEP_HARD_CLAW
 	heavyfootstep = FOOTSTEP_GENERIC_HEAVY
 	landsound = 'sound/foley/jumpland/grassland.wav'
+
+/turf/open/floor/rogue/sewer
+	icon_state = "sewer1"
+	footstep = FOOTSTEP_STONE
+	barefootstep = FOOTSTEP_HARD_BAREFOOT
+	clawfootstep = FOOTSTEP_HARD_CLAW
+	heavyfootstep = FOOTSTEP_GENERIC_HEAVY
+	landsound = 'sound/foley/jumpland/stoneland.wav'
+
+/turf/open/floor/rogue/sewer/Initialize()
+	. = ..()
+	icon_state = "cobblestone[rand(1,4)]"
+
+/turf/open/floor/rogue/cobble/blackcobble
+	icon_state = "blackstone1"
+/turf/open/floor/rogue/cobble/blackcobble/Initialize()
+	. = ..()
+	icon_state = "blackstone[rand(1,4)]"

@@ -246,7 +246,7 @@
 	name = "sewage"
 	desc = "This dark water smells like dead rats and sulphur!"
 	icon = 'icons/turf/roguefloor.dmi'
-	icon_state = "pavingW"
+	icon_state = "sewerW"
 	water_level = 1
 	water_color = "#705a43"
 	slowdown = 1
@@ -254,7 +254,7 @@
 	water_reagent = /datum/reagent/water/gross
 
 /turf/open/water/sewer/Initialize()
-	icon_state = "paving"
+	icon_state = "sewer[rand(1,4)]"
 	water_color = pick("#705a43","#697043")
 	.  = ..()
 
